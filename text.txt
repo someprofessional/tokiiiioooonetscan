@@ -1,0 +1,22 @@
+async fn resolvable(ip: String, port: u32, timeout_seconds: u64) -> Result<tokio::net::TcpStream, Box<dyn std::error::Error + Send + Sync>> {
+    tokio::time::timeout(std::time::Duration::from_secs(timeout_seconds), tokio::net::TcpStream::connect(format!("{}:{}", ip, port)))
+        .await?
+        .map_err(|err| Box::new(err) as Box<dyn std::error::Error + Send + Sync>)
+}
+
+#[tokio::main]
+async fn main() {
+    let mut jhs = Vec::new();
+    for port in 0..65536 {
+        let jh = tokio::spawn(async move {
+            match resolvable("127.0.0.1".into(), port, 5).await {
+                Ok(_) => println!("Port {} open!", port),
+                Err(_err) => {},
+            }
+        });
+        jhs.push(jh);
+    }
+    for jh in jhs {
+        jh.await;
+    }
+}
